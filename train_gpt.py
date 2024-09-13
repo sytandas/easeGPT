@@ -62,7 +62,6 @@ class MLP(nn.Module):
         return x
 
 class Block(nn.Module):
-
     def __init__(self, config):
         super().__init__()
         self.ln_1 = nn.LayerNorm(config.n_embd)
@@ -73,20 +72,6 @@ class Block(nn.Module):
     def forward(self, x):
         x = x + self.attn(self.ln_1(x))
         x = x + self.mlp(self.ln_2(x))
-        return x
-
-class Block(nn.Module):
-
-    def __init__(self, config):
-        super().__init__()
-        self.ln_1 = nn.LayerNorm(config.n_embd)
-        self.attn = CausalSelfAttention(config)
-        self.ln_2 = nn.LayerNorm(config.n_embd)
-        self.mlp = MLP(config)
-
-    def forward(self, x):
-        x = x + self.attn(self.ln_1(x))
-        y = y + self.attn(self.ln_2(x))
         return x
 
 @dataclass
@@ -208,10 +193,10 @@ model.to('cuda')
 # prefix token
 
 import tiktoken
-enc = tiktoken.get_encoding('gpt-2')
+enc = tiktoken.get_encoding('gpt2')
 tokens = enc.encode("Hello, I'm a large language model,")
-tokens = enc.tensor(tokens, dtypes=torch.long) # (8, 0)
-tokens = tokens.unsqueese(0).repeat(num_return_sequence, 1) # (5, 8)
+tokens = torch.tensor(tokens, dtype=torch.long) # (8, 0)
+tokens = tokens.unsqueeze(0).repeat(num_return_sequence, 1) # (5, 8)
 x = tokens.to('cuda')
 
 # generate! right now x is (B, T) where B = 5, T = 8
@@ -221,19 +206,21 @@ torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 while x.size(1) < max_length:
     # forward the model to get the logits
-    logits = model(x) # (B, T, vocab_size)
-    # take the logits to the last position
-    logits = logits[:, -1, :] # (B, vocab_size)
-    # get the probabilities 
-    probs = F.softmax(logits, dim=-1)
-    
-    topk_probs, topk_indices = torch.topk(probs, dim=-1)
-
-    ix = torch.multinomial(topk_probs, 1) # (B, 1)
-    # gather the corresponding indices
-    xcol = torch.gather(topk_indices, -1, ix) # (B, 1)
-    # append to the sequences 
-    x = torch.cat((x, x.col), dim=1)
+    with torch.no_grad():
+        logits = model(x) # (B, T, vocab_size)
+        # take the logits to the last position
+        logits = logits[:, -1, :] # (B, vocab_size)
+        # get the probabilities 
+        probs = F.softmax(logits, dim=-1)
+        # do top-k sampling of 50 (huggingface pipeline default)
+        # topk_probs here become (5, 50), topk_indices is (5, 50)
+        topk_probs, topk_indices = torch.topk(probs, dim=-1)
+        # select a token from the top-k probabilities 
+        ix = torch.multinomial(topk_probs, 1) # (B, 1)
+        # gather the corresponding indices
+        xcol = torch.gather(topk_indices, -1, ix) # (B, 1)
+        # append to the sequences 
+        x = torch.cat((x, x.col), dim=1)
 
 for i in range(num_return_sequence):
     tokens = x[i, :max_length].tolist()
