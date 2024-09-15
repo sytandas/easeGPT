@@ -7,6 +7,8 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 
 import torch
+import torch.backends
+import torch.backends.mps
 import torch.nn as nn
 from torch.nn import functional as F
 import torch._inductor.config as config
@@ -83,11 +85,9 @@ class GPTConfig:
     n_embd: int = 768 # embedding dimension
 
 class GPT(nn.Module):
-
     def __init__(self, config):
         super().__init__()
         self.config = config
-
         self.transformer = nn.ModuleDict(dict(
             wte = nn.Embedding(config.vocab_size, config.n_embd),
             wpe = nn.Embedding(config.block_size, config.n_embd),
@@ -179,13 +179,21 @@ class GPT(nn.Module):
 
         return model
 
+# auto detect device 
+device = "cpu"
+if torch.cuda.is_available():
+    device = "cuda"
+elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    device = "mps"
+print(f"using device: {device}")
 
 num_return_sequence = 5
 max_length = 30
 
-model = GPT.from_pretrained('gpt2')
+# model = GPT.from_pretrained('gpt2')
+model = GPT(GPTConfig())
 model.eval()
-model.to('cuda')
+model.to(device)
 
 # prefix token
 
@@ -194,7 +202,7 @@ enc = tiktoken.get_encoding('gpt2')
 tokens = enc.encode("Hello, I'm a large language model,")
 tokens = torch.tensor(tokens, dtype=torch.long) # (8, 0)
 tokens = tokens.unsqueeze(0).repeat(num_return_sequence, 1) # (5, 8)
-x = tokens.to('cuda')
+x = tokens.to(device)
 
 # generate! right now x is (B, T) where B = 5, T = 8
 # set the seed to 42
@@ -218,6 +226,7 @@ while x.size(1) < max_length:
         # append to the sequences 
         x = torch.cat((x, xcol), dim=1)
 
+# print the generated tokens
 for i in range(num_return_sequence):
     tokens = x[i, :max_length].tolist()
     decode = enc.decode(tokens)
