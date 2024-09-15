@@ -113,7 +113,7 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None):
+    def forward(self, idx):
         # idx is of shape (B, T)
         B, T = idx.size()
         assert T <= self.config.block_size, f"Cannot forward sequence of length {T}, block size is only {self.config.block_size}"
@@ -128,10 +128,7 @@ class GPT(nn.Module):
         # forward the final layernorm and the classifier
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x) # (B, T, vocab_size)
-        loss = None
-        if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
-        return logits, loss
+        return logits
 
     @classmethod
     def from_pretrained(cls, model_type):
@@ -201,7 +198,6 @@ x = tokens.to('cuda')
 
 # generate! right now x is (B, T) where B = 5, T = 8
 # set the seed to 42
-
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 while x.size(1) < max_length:
@@ -214,13 +210,13 @@ while x.size(1) < max_length:
         probs = F.softmax(logits, dim=-1)
         # do top-k sampling of 50 (huggingface pipeline default)
         # topk_probs here become (5, 50), topk_indices is (5, 50)
-        topk_probs, topk_indices = torch.topk(probs, dim=-1)
+        topk_probs, topk_indices = torch.topk(probs, 50, dim=-1)
         # select a token from the top-k probabilities 
         ix = torch.multinomial(topk_probs, 1) # (B, 1)
         # gather the corresponding indices
         xcol = torch.gather(topk_indices, -1, ix) # (B, 1)
         # append to the sequences 
-        x = torch.cat((x, x.col), dim=1)
+        x = torch.cat((x, xcol), dim=1)
 
 for i in range(num_return_sequence):
     tokens = x[i, :max_length].tolist()
