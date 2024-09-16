@@ -186,15 +186,30 @@ if torch.cuda.is_available():
 elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 print(f"using device: {device}")
+device = "cpu"
 
 num_return_sequence = 5
 max_length = 30
 
-# model = GPT.from_pretrained('gpt2')
-model = GPT(GPTConfig())
-model.eval()
-model.to(device)
+# data batch
+import tiktoken
+enc = tiktoken.get_encoding('gpt2')
+with open('input.txt', 'r') as f:
+    text = f.read()
+text = text[:1000]
+tokens = enc.encode(text)
+B, T = 4, 32
+buf = torch.tensor(tokens[:B*T + 1])
+x = buf[:-1].view(B, T)
+y = buf[1:].view(B, T)
 
+# get logits 
+model = GPT(GPTConfig())
+model.to(device)
+logits = model(x)
+print(logits.shape)
+
+model.eval()
 # prefix token
 
 import tiktoken
