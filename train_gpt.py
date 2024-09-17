@@ -210,8 +210,8 @@ logits = model(x)
 print(logits.shape)
 
 model.eval()
-# prefix token
 
+# prefix token
 import tiktoken
 enc = tiktoken.get_encoding('gpt2')
 tokens = enc.encode("Hello, I'm a large language model,")
