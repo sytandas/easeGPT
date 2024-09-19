@@ -246,3 +246,9 @@ for i in range(num_return_sequence):
     tokens = x[i, :max_length].tolist()
     decode = enc.decode(tokens)
     print(">", decode)
+
+def reset(self):
+        # state, init at shard zero
+        self.current_shard = 0
+        self.tokens = load_tokens(self.shards[self.current_shard])
+        self.current_position = self.B * self.T * self.process_rank
