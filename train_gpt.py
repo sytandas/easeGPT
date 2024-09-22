@@ -113,7 +113,7 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx):
+    def forward(self, idx, targets = None):
         # idx is of shape (B, T)
         B, T = idx.size()
         assert T <= self.config.block_size, f"Cannot forward sequence of length {T}, block size is only {self.config.block_size}"
@@ -128,7 +128,12 @@ class GPT(nn.Module):
         # forward the final layernorm and the classifier
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x) # (B, T, vocab_size)
-        return logits
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+        return logits, loss
+        print(loss)
+        import sys; sys.exit(0)
 
     @classmethod
     def from_pretrained(cls, model_type):
@@ -188,6 +193,8 @@ elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
 print(f"using device: {device}")
 device = "cpu"
 
+# does loss is effected by cpu and gpu execution and how different it will!
+
 num_return_sequence = 5
 max_length = 30
 
@@ -206,8 +213,18 @@ y = buf[1:].view(B, T)
 # get logits 
 model = GPT(GPTConfig())
 model.to(device)
-logits = model(x)
-print(logits.shape)
+# logits, loss = model(x, y)
+
+# optimizer:
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+for i in range(50):
+    optimizer.zero_grad() # always need to set zero to optimizer 
+    logtis, loss = model(x, y)
+    loss.backward()
+    optimizer.step()
+    print(f"step {i}, loss: {loss.item()}")
+
+import sys; sys.exit(0)
 
 model.eval()
 
