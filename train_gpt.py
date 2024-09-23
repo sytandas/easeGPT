@@ -183,6 +183,33 @@ class GPT(nn.Module):
                     sd[k].copy_(sd_hf[k])
 
         return model
+    
+# data batch
+import tiktoken
+class DataLoader:
+    def __init__(self, B, T):
+        self.B = B
+        self.T = T
+
+        with open('input.txt', 'r') as f:
+            text = f.read()
+        enc = tiktoken.get_encoding('gpt2')
+        tokens= enc.encode(text)
+        self.tokens = torch.tensor(tokens)
+        print(f"loaded {len(self.tokens)} tokens")
+        print(f"1 epoch = {len(self.tokens) // (B * T)} Batches")
+
+        self.current_positions = 0 # state 
+    
+    def next_batch(self):
+        B, T = self.B, self.T
+        buf = self.tokens[self.current_positions : self.current_positions+B*T+1]
+        x = buf[:-1].view(B, T)
+        y = buf[1:].view(B, T)
+        self.current_positions += B*T
+        if self.current_positions + (B * T + 1 )>len(self.tokens):
+            self.current_positions = 0
+        return x, y
 
 # auto detect device 
 device = "cpu"
@@ -191,33 +218,24 @@ if torch.cuda.is_available():
 elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 print(f"using device: {device}")
-device = "cpu"
 
-# does loss is effected by cpu and gpu execution and how different it will!
+# num_return_sequence = 5
+# max_length = 30
 
-num_return_sequence = 5
-max_length = 30
-
-# data batch
-import tiktoken
-enc = tiktoken.get_encoding('gpt2')
-with open('input.txt', 'r') as f:
-    text = f.read()
-text = text[:1000]
-tokens = enc.encode(text)
-B, T = 4, 32
-buf = torch.tensor(tokens[:B*T + 1])
-x = buf[:-1].view(B, T)
-y = buf[1:].view(B, T)
+train_loader = DataLoader(B=4, T=32)
 
 # get logits 
 model = GPT(GPTConfig())
 model.to(device)
+
 # logits, loss = model(x, y)
 
 # optimizer:
 optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
 for i in range(50):
+    x, y = train_loader.next_batch()
+    x = x.to(device)
+    y = y.to(device)
     optimizer.zero_grad() # always need to set zero to optimizer 
     logtis, loss = model(x, y)
     loss.backward()
