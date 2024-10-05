@@ -219,9 +219,6 @@ elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 print(f"using device: {device}")
 
-# num_return_sequence = 5
-# max_length = 30
-
 train_loader = DataLoader(B=4, T=32)
 
 # get logits 
