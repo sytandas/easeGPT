@@ -55,7 +55,7 @@ class MLP(nn.Module):
         self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd)
         self.gelu    = nn.GELU(approximate='tanh')
         self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd)
-        self.c_proj.NANOGPT_SCALE_INIT = 1
+        self.c_proj.NANOGPT_SCALE_INIT = 1 # attaching same to avoid conflict 
 
     def forward(self, x):
         x = self.c_fc(x)
@@ -104,7 +104,7 @@ class GPT(nn.Module):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            std = 0.02
+            std = 0.02 # shuld default 
             if hasattr(module, 'NANOGPT_SCALE_INIT'):
                 std *= (2 * self.config.n_layer) ** -0.5
             torch.nn.init.normal_(module.weight, mean=0.0, std=std)
@@ -219,7 +219,8 @@ elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 print(f"using device: {device}")
 
-train_loader = DataLoader(B=4, T=32)
+# train_loader = DataLoader(B=4, T=32)
+train_loader = DataLoader(B=4, T=1024)
 
 # get logits 
 model = GPT(GPTConfig())
@@ -227,9 +228,11 @@ model.to(device)
 
 # logits, loss = model(x, y)
 
+import time
 # optimizer:
 optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
 for i in range(50):
+    t0 = time.time()
     x, y = train_loader.next_batch()
     x = x.to(device)
     y = y.to(device)
@@ -237,7 +240,10 @@ for i in range(50):
     logtis, loss = model(x, y)
     loss.backward()
     optimizer.step()
-    print(f"step {i}, loss: {loss.item()}")
+    torch.cuda.synchronize()
+    t1 = time.time()
+    dt = (t1 - t0)*1000 # time diff - ms
+    print(f"step {i}, loss: {loss.item()}, dt: {dt: .2f}ms")
 
 import sys; sys.exit(0)
 
