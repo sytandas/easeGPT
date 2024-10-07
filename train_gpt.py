@@ -226,6 +226,7 @@ torch.set_float32_matmul_precision('high')
 # get logits 
 model = GPT(GPTConfig())
 model.to(device)
+model = torch.compile(model)
 
 # logits, loss = model(x, y)
 
