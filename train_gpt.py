@@ -220,7 +220,8 @@ elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
 print(f"using device: {device}")
 
 # train_loader = DataLoader(B=4, T=32)
-train_loader = DataLoader(B=4, T=1024)
+train_loader = DataLoader(B=6, T=1024)  # using for 3060-12GB home machine
+torch.set_float32_matmul_precision('high')
 
 # get logits 
 model = GPT(GPTConfig())
@@ -237,13 +238,16 @@ for i in range(50):
     x = x.to(device)
     y = y.to(device)
     optimizer.zero_grad() # always need to set zero to optimizer 
-    logtis, loss = model(x, y)
+    with torch.autocast(device_type=device, dtype=torch.bfloat16):
+        logits, loss = model(x, y)
+        # import code; code.interact(local=locals())
     loss.backward()
     optimizer.step()
     torch.cuda.synchronize()
     t1 = time.time()
     dt = (t1 - t0)*1000 # time diff - ms
-    print(f"step {i}, loss: {loss.item()}, dt: {dt: .2f}ms")
+    tokens_per_second = (train_loader.B * train_loader.T) / (t1 - t0) 
+    print(f"step {i}, loss: {loss.item()},  dt: {dt: .2f}ms, tok/sec: {tokens_per_second}")
 
 import sys; sys.exit(0)
 
