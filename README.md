@@ -1,1 +1,1 @@
-Building gpt, keep the "ease" thing in mind. 
+Building gpt, with "ease" in mind. 
