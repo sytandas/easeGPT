@@ -6,6 +6,7 @@ import inspect
 from contextlib import nullcontext
 from dataclasses import dataclass
 
+import tiktoken
 import torch
 import torch.backends
 import torch.backends.mps
@@ -185,7 +186,6 @@ class GPT(nn.Module):
         return model
     
 # data batch
-import tiktoken
 class DataLoader:
     def __init__(self, B, T):
         self.B = B
@@ -255,7 +255,6 @@ import sys; sys.exit(0)
 model.eval()
 
 # prefix token
-import tiktoken
 enc = tiktoken.get_encoding('gpt2')
 tokens = enc.encode("Hello, I'm a large language model,")
 tokens = torch.tensor(tokens, dtype=torch.long) # (8, 0)
