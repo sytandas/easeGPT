@@ -1,2 +1,2 @@
 Building gpt, with "ease" in mind. 
-work - 29th oct
+Big update coming - 2nd Nov 
