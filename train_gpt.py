@@ -105,9 +105,9 @@ class GPT(nn.Module):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            std = 0.02 # shuld default 
+            std = 0.02 # should default 
             if hasattr(module, 'NANOGPT_SCALE_INIT'):
-                std *= (2 * self.config.n_layer) ** -0.5
+                std *= (2 * self.config.n_layer) ** -0.5 # attentin and mlp: that is where 2 times comes from forward block
             torch.nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
