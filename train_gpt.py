@@ -219,9 +219,8 @@ elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 print(f"using device: {device}")
 
-# train_loader = DataLoader(B=4, T=32)
 train_loader = DataLoader(B=6, T=1024)  # using for 3060-12GB home machine
-torch.set_float32_matmul_precision('high')
+# torch.set_float32_matmul_precision('high')
 
 # get logits 
 model = GPT(GPTConfig())
