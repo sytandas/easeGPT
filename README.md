@@ -1,1 +1,1 @@
-Building gpt, with "ease". 
+Building gpt, with "ease"
