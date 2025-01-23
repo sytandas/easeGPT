@@ -1,3 +1,1 @@
 Building gpt, with "ease".
-New implementaion tomrrow, for big cause. 
-Work on... 
