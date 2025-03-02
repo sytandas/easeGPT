@@ -1,4 +1,5 @@
 # neural net post mortem 
+# internal and working within 3rd March
 import numpy as np 
 
 class NeuralNetwrok:
