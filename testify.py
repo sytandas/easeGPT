@@ -1,6 +1,6 @@
 # neural net post mortem 
 import numpy as np 
-# work on 10th
+# work on 23rd
 class NeuralNetwrok:
     def __init__ (self, input_size, hidden_size, output_size):
         
