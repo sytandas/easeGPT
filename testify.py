@@ -66,4 +66,4 @@ if __name__ == "__main__":
     Y_train = np.random.randint(0, 10, 1000)  # Random labels (0-9)
     
     nn = SimpleNeuralNetwork(784, 128, 10, learning_rate=0.1)
-    nn.train(X_train, Y_train, epochs=100000)
+    nn.train(X_train, Y_train, epochs=1000)
